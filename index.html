@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<!-- saved from url=(0073)https://summer-h-s.github.io/summer-h-s-web/Lab2/ubcv_microwaves_map.html -->
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    
+<html>
+  <head>
+    <meta charset="UTF-8">
     <title>UBC Microwave Locator</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -37,19 +37,31 @@
         box-shadow: 0 1px 2px rgb(0 0 0 / 10%);
       }
 
-      .map-attribution a {
-        color: rgba(0, 0, 0, 0.75);
-        text-decoration: none;
-        position: absolute;
-        right: 270px;
-        bottom: 0;
-        padding: 0 5px;
-        background-color: hsla(0, 0%, 100%, 0.5);
-        margin: 0;
-        font: 12px/20px Helvetica Neue, Arial, Helvetica, sans-serif;
-        overflow: hidden;
+      .map-overlay.hidden {
+        display: none;
       }
-      
+
+      #help-btn {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        width: 40px;
+        height: 40px;
+        background-color: white;
+        border-radius: 50%;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        display: none;
+      }
+
+      #help-btn img {
+        width: 20px;
+        height: 20px;
+      }
+
       .mapboxgl-popup {
         padding: 5px 10px;
         border-radius: 5px;
@@ -104,37 +116,75 @@
   </head>
 
   <body>
-    <div id="map" class="mapboxgl-map"><div class="mapboxgl-canary" style="visibility: hidden;"></div><div class="mapboxgl-canvas-container mapboxgl-interactive mapboxgl-touch-drag-pan mapboxgl-touch-zoom-rotate"><canvas class="mapboxgl-canvas" tabindex="0" aria-label="Map" role="region" width="2880" height="1282" style="width: 1440px; height: 641px;"></canvas></div><div class="mapboxgl-control-container"><div class="mapboxgl-ctrl-top-left"></div><div class="mapboxgl-ctrl-top-right"></div><div class="mapboxgl-ctrl-bottom-left"><div class="mapboxgl-ctrl" style="display: block;"><a class="mapboxgl-ctrl-logo" target="_blank" rel="noopener nofollow" href="https://www.mapbox.com/" aria-label="Mapbox logo"></a></div></div><div class="mapboxgl-ctrl-bottom-right"><div class="mapboxgl-ctrl mapboxgl-ctrl-attrib"><button class="mapboxgl-ctrl-attrib-button" title="Toggle attribution" aria-label="Toggle attribution"></button><div class="mapboxgl-ctrl-attrib-inner" role="list"><a href="https://www.mapbox.com/about/maps/" target="_blank" title="Mapbox" aria-label="Mapbox">© Mapbox</a> <a href="https://www.openstreetmap.org/about/" target="_blank" title="OpenStreetMap" aria-label="OpenStreetMap">© OpenStreetMap</a> <a class="mapbox-improve-map" href="https://apps.mapbox.com/feedback/?owner=mapbox&amp;id=streets-v11&amp;access_token=pk.eyJ1Ijoic3VtbWVyLWgtcyIsImEiOiJjbHN3b21reGQydmNlMmxwcHh0OWw4cTgwIn0.MpcHLXkWUYWUOBqfMlCZVw" target="_blank" title="Map feedback" aria-label="Map feedback" rel="noopener nofollow">Improve this map</a></div></div></div></div></div>
-    <div class="map-overlay">
-      <h2>UBC Microwave Locator</h2>
+    <div id="map"></div>
+    <!-- Popup/Help overlay -->
+    <div class="map-overlay" id="map-overlay">
+      <h2>UBC Microwave Locator 
+        <span id="close-overlay" style="cursor:pointer; float: right;">&times;</span>
+      </h2>
       <div>
         <strong>
-          Click anywhere on the map to highlight the closest microwave. Click on
-          an icon to learn more.
+          Click anywhere on the map to highlight the closest microwave, and then click to learn more.
         </strong>
         <p>
-          This is a collaborative mapping project. Learn how to add or edit points <a href="https://docs.google.com/spreadsheets/d/1meLUxBldPY7nR5bxVDAH_YshUEVnrjwjLYQZtJVxCR8/edit?usp=sharing">here.</a>
+          by Daniel Benjamin, adapted from <a href="https://github.com/summer-h-s/summer-h-s-web/tree/main/Lab2">summer-h-s</a>
         </p>
-
       </div>
     </div>
 
-    <div class="map-attribution">
-     icon by <a href="https://icons8.com/">Icons8</a>
+    <!-- Help button that appears when the overlay is minimized -->
+    <div id="help-btn">
+      <img src="https://img.icons8.com/ios-filled/50/000000/help.png" alt="Help Icon">
     </div>
 
     <script>
-      mapboxgl.accessToken =
-        "pk.eyJ1Ijoic3VtbWVyLWgtcyIsImEiOiJjbHN3b21reGQydmNlMmxwcHh0OWw4cTgwIn0.MpcHLXkWUYWUOBqfMlCZVw";
+      // Close overlay and show the help button
+      document.getElementById('close-overlay').addEventListener('click', function () {
+        document.getElementById('map-overlay').style.display = 'none';
+        document.getElementById('help-btn').style.display = 'flex';
+      });
+
+      // Open overlay and hide the help button
+      document.getElementById('help-btn').addEventListener('click', function () {
+        document.getElementById('map-overlay').style.display = 'block';
+        document.getElementById('help-btn').style.display = 'none';
+      });
+    </script>
+
+    <script>
+      mapboxgl.accessToken = "pk.eyJ1Ijoic3VtbWVyLWgtcyIsImEiOiJjbHN3b21reGQydmNlMmxwcHh0OWw4cTgwIn0.MpcHLXkWUYWUOBqfMlCZVw";
       var map = new mapboxgl.Map({
         container: "map",
         style: "mapbox://styles/mapbox/streets-v11",
         center: [-123.246, 49.2606],
         zoom: 13,
+        attributionControl: false,
       });
 
-      //turn live sheet into dataset.
-      //(follows the Mapbox sheetmapper tutorial)
+      // Add a "Locate Me" control button for user's current location
+      var geolocateControl = new mapboxgl.GeolocateControl({
+        positionOptions: {
+          enableHighAccuracy: true
+        },
+        trackUserLocation: true,
+        showAccuracyCircle: true,
+        showUserHeading: true
+      });
+
+      // Add the control to the map
+      map.addControl(geolocateControl, 'bottom-right');
+
+      // Event listener to automatically trigger the location once map is ready
+      map.on('load', function () {
+        geolocateControl.trigger();
+      });
+
+      // Append Icons8 attribution to the existing Mapbox attribution
+      map.addControl(new mapboxgl.AttributionControl({
+        customAttribution: '<a href="https://icons8.com/" target="_blank">Icons by Icons8</a>'
+      }));
+
+      // Turn live sheet into dataset
       $(document).ready(function () {
         $.ajax({
           type: "GET",
@@ -155,8 +205,6 @@
             },
             function (err, data) {
               map.on("load", function () {
-                // add marker image.
-                //(follows the Mapbox 'add an icon to the map' tutorial, using an external url)
                 map.loadImage(
                   "https://img.icons8.com/ios-filled/50/000000/microwave.png",
                   function (error, image) {
@@ -165,9 +213,6 @@
                   }
                 );
 
-                // add data.
-                //(adapts Mapbox 'Analyze data with Turf.js' tutorial and the code of 
-                //several other existing projects, identified using the DevTools)
                 map.addLayer({
                   id: "csvData",
                   type: "symbol",
@@ -183,14 +228,12 @@
                   },
                 });
 
-                // event listener for popups
                 map.on("click", "csvData", function (e) {
                   var coordinates = e.features[0].geometry.coordinates.slice();
-                  // popup text
                   var description =
                     `<h3>` +
                     e.features[0].properties["Number of Microwaves"] +
-                    ` Microwave (s)` +
+                    ` Microwave(s)` +
                     `</h3>` +
                     `<h4>` +
                     `<b>` +
@@ -209,7 +252,6 @@
                     `</b>` +
                     e.features[0].properties.Notes +
                     `</h4>` +
-                    `</h4>` +
                     `<h4>` +
                     `<b>` +
                     `Building Hours: ` +
@@ -223,15 +265,10 @@
                     e.features[0].properties["Last Updated"] +
                     `</h4>`;
 
-                  // Ensure that if the map is zoomed out such that multiple
-                  // copies of the feature are visible, the popup appears
-                  // over the copy being pointed to.
                   while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-                    coordinates[0] +=
-                      e.lngLat.lng > coordinates[0] ? 360 : -360;
+                    coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
                   }
 
-                  // add Popup to map
                   new mapboxgl.Popup()
                     .setLngLat(coordinates)
                     .setHTML(description)
@@ -246,10 +283,6 @@
         }
       });
 
-      // Event listener for finding nearest microwave.
-      //(adapts the 'WebGIS with Turf.js and Leaflet' tutorial, plus the code of 
-      //several other existing projects, identified using the DevTools, and some help with the clickedPoint
-      // funcitonality from a lot of research and the Stackoverflow posts referenced in my README)
       map.on("click", function (e) {
         var clickedPoint = turf.point([e.lngLat.lng, e.lngLat.lat]);
         var microwaveFeatures = map.queryRenderedFeatures({
@@ -261,23 +294,13 @@
           coordinates.push(turf.point(feature.geometry.coordinates));
         });
 
-        // Find the nearest point from the microwave data
-        var nearest = turf.nearestPoint(
-          clickedPoint,
-          turf.featureCollection(coordinates)
-        );
+        var nearest = turf.nearestPoint(clickedPoint, turf.featureCollection(coordinates));
 
-        // Remove existing circle if it exists. 
-        //(this point and after was adapted from the 'WebGIS with Turf.js and Leaflet'
-        //tutorial, so I first made my map with their commands to make a marker on the nearest feature on mouse click,
-        //then figured out how to make this a circle. The Mapbox 'Analyze data with Turf.js' tutorial moreso helped me 
-        //handle the formatting for this circle layer)
         if (map.getLayer("nearest-circle")) {
           map.removeLayer("nearest-circle");
           map.removeSource("nearest-circle");
         }
 
-        // Create a new circle
         map.addLayer(
           {
             id: "nearest-circle",
@@ -296,13 +319,11 @@
             paint: {
               "circle-radius": 18,
               "circle-color": "#FCC419",
-              //"circle-opacity": 0.5,
             },
           },
           "csvData"
         );
       });
     </script>
-  
-
-</body><div style="all: initial !important;"><template shadowrootmode="open"><link rel="stylesheet" type="text/css" href="chrome-extension://idpbkophnbfijcnlffdmmppgnncgappc/css/content.css"></template></div></html>
+  </body>
+</html>
