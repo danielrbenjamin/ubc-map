@@ -188,7 +188,7 @@
       $(document).ready(function () {
         $.ajax({
           type: "GET",
-          url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6ZbqJ06vNtRY-rt2xbn-h6bH31WIq6Hka8JoCEbUtzVBLEOUkkIabHCUuG2bruHSt16KiREqSe_NY/pub?gid=0&single=true&output=csv",
+          url: "https://docs.google.com/spreadsheets/d/1264YIM8sY3HgY9Rj5GngQvNa2PsuT-a_YcZNdDEt5r8/gviz/tq?tqx=out:csv&sheet=data",
           dataType: "text",
           success: function (csvData) {
             makeGeoJSON(csvData);
