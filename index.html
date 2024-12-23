@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>UBC Microwave Locator</title>
+    <title>UBC Amenities Map</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
@@ -20,6 +20,37 @@
         top: 0;
         bottom: 0;
         width: 100%;
+      }
+
+      #sidebar {
+        position: absolute;
+        bottom: 30px;
+        left: 20px;
+        width: 175px;
+        background: #ffffff;
+        padding: 10px;
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        z-index: 9999;
+      }
+
+      #sidebar label {
+      display: block;
+      margin: 5px 0;
+      font-family: "Arial", sans-serif; /* Change to your desired font */
+      font-size: 14px; /* Adjust size as needed */
+      font-weight: bold; /* Adjust weight (e.g., normal, bold, lighter) */
+      color: #333; /* Change text color */
+      }
+
+
+      .checkbox-container {
+        display: flex;
+        align-items: center;
+      }
+
+      .checkbox-container input {
+        margin-right: 10px;
       }
 
       .map-overlay {
@@ -116,15 +147,30 @@
   </head>
 
   <body>
-    <div id="map"></div>
+    <div id="sidebar">
+        <div class="checkbox-container">
+          <input type="checkbox" id="toggle-microwaves" checked>
+          <label for="toggle-microwaves">Microwaves</label>
+        </div>
+        <div class="checkbox-container">
+          <input type="checkbox" id="toggle-showers" checked>
+          <label for="toggle-showers">Showers</label>
+        </div>
+        <div class="checkbox-container">
+          <input type="checkbox" id="toggle-waterfountains" checked>
+          <label for="toggle-waterfountains">Water Fountains</label>
+        </div>
+      </div>
+      <div id="map"></div>
+
     <!-- Popup/Help overlay -->
     <div class="map-overlay" id="map-overlay">
-      <h2>UBC Microwave Locator 
+      <h2>UBC Amenities Map 
         <span id="close-overlay" style="cursor:pointer; float: right;">&times;</span>
       </h2>
       <div>
         <strong>
-          Click anywhere on the map to highlight the closest microwave, and then click to learn more.
+          Click anywhere on the map to highlight the closest microwave/shower/water fountain, and then click to learn more.
         </strong>
         <p>
           by Daniel Benjamin, adapted from <a href="https://github.com/summer-h-s/summer-h-s-web/tree/main/Lab2">summer-h-s</a>
@@ -149,11 +195,10 @@
         document.getElementById('map-overlay').style.display = 'block';
         document.getElementById('help-btn').style.display = 'none';
       });
-    </script>
 
-    <script>
       mapboxgl.accessToken = "pk.eyJ1IjoiZGFuaWVscmJlbmphbWluIiwiYSI6ImNtMmQzN3M5MDEwOHQycHEyZXhlaWozZ2sifQ.K10NcvX8zyHpWaBXh5tohg";
-      var map = new mapboxgl.Map({
+
+      const map = new mapboxgl.Map({
         container: "map",
         style: "mapbox://styles/mapbox/streets-v11",
         center: [-123.246, 49.2606],
@@ -161,7 +206,116 @@
         attributionControl: false,
       });
 
-      // Add a "Locate Me" control button for user's current location
+    // Append Icons8 attribution to the existing Mapbox attribution
+        map.addControl(new mapboxgl.AttributionControl({
+            customAttribution: '<a href="https://icons8.com/" target="_blank">Icons by Icons8</a>'
+      }));
+
+      const amenities = [
+        {
+          name: "Microwaves",
+          id: "microwave-layer",
+          icon: "https://img.icons8.com/ios-filled/50/000000/microwave.png",
+          sheetName: "microwaves",
+        },
+        {
+          name: "Showers",
+          id: "shower-layer",
+          icon: "https://img.icons8.com/ios-filled/50/000000/shower.png",
+          sheetName: "showers",
+        },
+        {
+          name: "Water Fountains",
+          id: "waterfountain-layer",
+          icon: "https://img.icons8.com/ios-filled/50/000000/water.png",
+          sheetName: "waterfountains",
+        },
+      ];
+
+      // Load amenities dynamically
+      function loadAmenity(amenity) {
+        $.ajax({
+          type: "GET",
+          url: `https://docs.google.com/spreadsheets/d/1264YIM8sY3HgY9Rj5GngQvNa2PsuT-a_YcZNdDEt5r8/gviz/tq?tqx=out:csv&sheet=${amenity.sheetName}`,
+          dataType: "text",
+          success: (csvData) => {
+            csv2geojson.csv2geojson(csvData, {
+              latfield: "Latitude",
+              lonfield: "Longitude",
+              delimiter: ",",
+            }, (err, data) => {
+              if (err) throw err;
+
+              map.loadImage(amenity.icon, (error, image) => {
+                if (error) throw error;
+                if (!map.hasImage(amenity.name)) {
+                  map.addImage(amenity.name, image);
+                }
+
+                map.addLayer({
+                  id: amenity.id,
+                  type: "symbol",
+                  source: {
+                    type: "geojson",
+                    data: data,
+                  },
+                  layout: {
+                    "icon-image": amenity.name,
+                    "icon-size": 0.5,
+                    "icon-anchor": "center",
+                    "visibility": "visible",
+                  },
+                  minzoom: 0, // Ensure icons are visible at all zoom levels
+                  maxzoom: 22, // Maximum zoom
+                });
+
+                // Add popup interaction
+                map.on("click", amenity.id, function (e) {
+                  var coordinates = e.features[0].geometry.coordinates.slice();
+                  var description =
+                    `<h3>${e.features[0].properties["Number of Microwaves"] || ""} ${amenity.name}</h3>` +
+                    `<h4><b>Location:</b> ${e.features[0].properties["Building Name"] || "Unknown"}</h4>` +
+                    `<h4><b>Description:</b> ${e.features[0].properties["Location Description"] || "N/A"}</h4>` +
+                    `<h4><b>Notes:</b> ${e.features[0].properties.Notes || "None"}</h4>` +
+                    `<h4><b>Building Hours:</b> ${e.features[0].properties["Building Hours"] || "Unknown"}</h4>` +
+                    `<h4><b>Last Updated:</b> ${e.features[0].properties["Last Updated"] || "Unknown"}</h4>`;
+
+                  new mapboxgl.Popup()
+                    .setLngLat(coordinates)
+                    .setHTML(description)
+                    .addTo(map);
+                });
+              });
+            });
+          },
+        });
+      }
+
+      amenities.forEach((amenity) => loadAmenity(amenity));
+
+      // Toggle layers visibility
+      function toggleLayer(layerId, isVisible) {
+        if (map.getLayer(layerId)) {
+          map.setLayoutProperty(layerId, "visibility", isVisible ? "visible" : "none");
+        }
+      }
+
+      // Add event listeners for toggling layers
+      $(document).ready(() => {
+        $("#toggle-microwaves").change(function () {
+          toggleLayer("microwave-layer", this.checked);
+        });
+
+        $("#toggle-showers").change(function () {
+          toggleLayer("shower-layer", this.checked);
+        });
+
+        $("#toggle-waterfountains").change(function () {
+          toggleLayer("waterfountain-layer", this.checked);
+        });
+      });
+
+      // Event listener to automatically trigger the location once map is ready
       var geolocateControl = new mapboxgl.GeolocateControl({
         positionOptions: {
           enableHighAccuracy: true
@@ -173,157 +327,45 @@
 
       // Add the control to the map
       map.addControl(geolocateControl, 'bottom-right');
-
-      // Event listener to automatically trigger the location once map is ready
       map.on('load', function () {
         geolocateControl.trigger();
       });
 
-      // Append Icons8 attribution to the existing Mapbox attribution
-      map.addControl(new mapboxgl.AttributionControl({
-        customAttribution: '<a href="https://icons8.com/" target="_blank">Icons by Icons8</a>'
-      }));
+// Highlight nearest amenity on click
+map.on("click", function (e) {
+  const clickedPoint = turf.point([e.lngLat.lng, e.lngLat.lat]);
+  const allLayers = amenities.map(a => a.id);
 
-      // Turn live sheet into dataset
-      $(document).ready(function () {
-        $.ajax({
-          type: "GET",
-          url: "https://docs.google.com/spreadsheets/d/1264YIM8sY3HgY9Rj5GngQvNa2PsuT-a_YcZNdDEt5r8/gviz/tq?tqx=out:csv&sheet=data",
-          dataType: "text",
-          success: function (csvData) {
-            makeGeoJSON(csvData);
+  const features = map.queryRenderedFeatures({ layers: allLayers });
+  if (features.length) {
+    const nearest = turf.nearestPoint(clickedPoint, turf.featureCollection(features.map(f => turf.point(f.geometry.coordinates))));
+
+    if (map.getLayer("nearest-circle")) {
+      map.removeLayer("nearest-circle");
+      map.removeSource("nearest-circle");
+    }
+
+    // Add the nearest circle layer beneath the amenity icons
+    map.addLayer(
+      {
+        id: "nearest-circle",
+        type: "circle",
+        source: {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            geometry: nearest.geometry,
           },
-        });
-
-        function makeGeoJSON(csvData) {
-          csv2geojson.csv2geojson(
-            csvData,
-            {
-              latfield: "Latitude",
-              lonfield: "Longitude",
-              delimiter: ",",
-            },
-            function (err, data) {
-              map.on("load", function () {
-                map.loadImage(
-                  "https://img.icons8.com/ios-filled/50/000000/microwave.png",
-                  function (error, image) {
-                    if (error) throw error;
-                    map.addImage("microwave", image);
-                  }
-                );
-
-                map.addLayer({
-                  id: "csvData",
-                  type: "symbol",
-                  source: {
-                    type: "geojson",
-                    data: data,
-                  },
-                  layout: {
-                    "icon-image": "microwave",
-                    "icon-anchor": "center",
-                    "icon-allow-overlap": true,
-                    "icon-size": 0.5,
-                  },
-                });
-
-                map.on("click", "csvData", function (e) {
-                  var coordinates = e.features[0].geometry.coordinates.slice();
-                  var description =
-                    `<h3>` +
-                    e.features[0].properties["Number of Microwaves"] +
-                    ` Microwave(s)` +
-                    `</h3>` +
-                    `<h4>` +
-                    `<b>` +
-                    `Location: ` +
-                    `</b>` +
-                    e.features[0].properties["Building Name"] +
-                    `</h4>` +
-                    `<h4>` +
-                    `<b>` +
-                    `Description: ` +
-                    `</b>` +
-                    e.features[0].properties["Location Description"] +
-                    `<h4>` +
-                    `<b>` +
-                    `Notes: ` +
-                    `</b>` +
-                    e.features[0].properties.Notes +
-                    `</h4>` +
-                    `<h4>` +
-                    `<b>` +
-                    `Building Hours: ` +
-                    `</b>` +
-                    e.features[0].properties["Building Hours"] +
-                    `</h4>` +
-                    `<h4>` +
-                    `<b>` +
-                    `Last Updated: ` +
-                    `</b>` +
-                    e.features[0].properties["Last Updated"] +
-                    `</h4>`;
-
-                  while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-                    coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-                  }
-
-                  new mapboxgl.Popup()
-                    .setLngLat(coordinates)
-                    .setHTML(description)
-                    .addTo(map);
-                });
-
-                var bbox = turf.bbox(data);
-                map.fitBounds(bbox, { padding: 50 });
-              });
-            }
-          );
-        }
-      });
-
-      map.on("click", function (e) {
-        var clickedPoint = turf.point([e.lngLat.lng, e.lngLat.lat]);
-        var microwaveFeatures = map.queryRenderedFeatures({
-          layers: ["csvData"],
-        });
-
-        var coordinates = [];
-        microwaveFeatures.forEach(function (feature) {
-          coordinates.push(turf.point(feature.geometry.coordinates));
-        });
-
-        var nearest = turf.nearestPoint(clickedPoint, turf.featureCollection(coordinates));
-
-        if (map.getLayer("nearest-circle")) {
-          map.removeLayer("nearest-circle");
-          map.removeSource("nearest-circle");
-        }
-
-        map.addLayer(
-          {
-            id: "nearest-circle",
-            type: "circle",
-            source: {
-              type: "geojson",
-              data: {
-                type: "Feature",
-                properties: {},
-                geometry: {
-                  type: "Point",
-                  coordinates: nearest.geometry.coordinates,
-                },
-              },
-            },
-            paint: {
-              "circle-radius": 18,
-              "circle-color": "#FCC419",
-            },
-          },
-          "csvData"
-        );
-      });
+        },
+        paint: {
+          "circle-radius": 18,
+          "circle-color": "#f28cb1",
+        },
+      },
+      allLayers[0] // Insert the layer below the first amenity layer
+    );
+  }
+});
     </script>
   </body>
 </html>
